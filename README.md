@@ -25,7 +25,7 @@ int main(int argc, wchar_t* argv[]) {
 	do{
 		if (wcscmp(pe32.szExeFile, copy) == 0) {
 			DWORD PID = pe32.th32ProcessID;
-			LPCSTR dll_path = "C:\\programs\\VisualStudio\\lessonprog\\evil-dll2\\x64\\Release\\evil-dll2.dll";
+			LPCSTR dll_path = "path to dll";
 			
 			HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, PID);
 			if (hProcess == NULL) {
