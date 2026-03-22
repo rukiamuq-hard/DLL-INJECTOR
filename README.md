@@ -1,67 +1,35 @@
-# DLL-INJECTOR
-//open cd with project, compile ant start, before start edit path to your dll, and start.	
-//after this you have argv 0 - name, argv 1 - name programm to inject.	
+# WinAPI DLL Injector
 
-#include <Windows.h>
-#include <stdio.h>
-#include <tlhelp32.h>
-#include <iostream>
-#include <string>
+Реализация классического инжектора динамических библиотек (DLL) на языке C++ с использованием Windows API. Проект демонстрирует работу с процессами, выделение памяти в чужом адресном пространстве и создание удаленных потоков.
 
-using namespace std;
+---
 
-int main(int argc, wchar_t* argv[]) {
+## Особенности
+* **Автоматический поиск PID:** Сканирование снимка системы для нахождения целевого процесса по имени.
+* **Метод инъекции:** Использование `CreateRemoteThread` и `LoadLibraryA`.
+* **Обработка ошибок:** Вывод подробных кодов системных ошибок через `GetLastError()`.
+* **Управление ресурсами:** Автоматическое закрытие дескрипторов (`CloseHandle`) и очистка памяти.
 
-	PROCESSENTRY32 pe32;
-	pe32.dwSize = sizeof(PROCESSENTRY32);
-	string puffy;
-	HANDLE SHAPSHOT = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-	if (argc < 2) {
-		cout << "<program name.exe> <what`s programm.exe>";
-		return 1;
-	}
-	const wchar_t* copy = argv[1];
-	Process32First(SHAPSHOT, &pe32);
-	do{
-		if (wcscmp(pe32.szExeFile, copy) == 0) {
-			DWORD PID = pe32.th32ProcessID;
-			LPCSTR dll_path = "path to dll";
-			
-			HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, PID);
-			if (hProcess == NULL) {
-				cout << "can`t open process: " << GetLastError();
-				return 1;
-			}
-			HANDLE alloc_mem = VirtualAllocEx(hProcess, NULL, strlen(dll_path) + 1, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-			if (alloc_mem == NULL) {
-				cout << "Can`t allocate memory: " << GetLastError();
-				return 1;
-			}
-			WriteProcessMemory(hProcess, alloc_mem, dll_path, strlen(dll_path) + 1, NULL);
-			cout << "Memory allocated at: " << alloc_mem;
+---
 
-			HMODULE Kernel = GetModuleHandleA("kernel32.dll");
-			if (Kernel == NULL) {
-				cout << "Can`t get kernel32: " << GetLastError();
-				return 1;
-			}
+## Технический стек
+* **Язык:** C++
+* **Библиотеки:** `Windows.h`, `TlHelp32.h`
+* **Среда:** Windows (x86/x64)
 
-			FARPROC lLoadLib = GetProcAddress(Kernel, "LoadLibraryA");
+---
 
-			HANDLE hThread = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)lLoadLib, alloc_mem, NULL, 0);
-			if (hThread == NULL) {
-				cout << "Can`t create thread: " << GetLastError();
-				return 1;
-			}
+## Принцип работы
+Программа выполняет следующие этапы:
+1. **Snapshot:** Создается снимок всех запущенных процессов через `CreateToolhelp32Snapshot`.
+2. **Search:** Итерация по списку процессов до нахождения совпадения с `argv[1]`.
+3. **Memory Allocation:** Выделение памяти в целевом процессе через `VirtualAllocEx`.
+4. **Write:** Запись пути к DLL в выделенную память через `WriteProcessMemory`.
+5. **Execution:** Вызов `LoadLibraryA` в контексте удаленного процесса.
 
-			WaitForSingleObject(hProcess, INFINITE);
-			VirtualFreeEx(hThread, alloc_mem, 0, MEM_RELEASE);
-			CloseHandle(hThread);
-			CloseHandle(hProcess);
-		}
-		
+---
 
-	
-	} while (Process32Next(SHAPSHOT, &pe32));
-	return 0;
-}
+### 1. Предварительная настройка
+Перед компиляцией укажите путь к вашей DLL в исходном коде:
+```cpp
+LPCSTR dll_path = "C:\\path\\to\\your\\library.dll";
